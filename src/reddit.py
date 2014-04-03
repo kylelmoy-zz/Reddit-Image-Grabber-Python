@@ -3,13 +3,14 @@ Created on Mar 13, 2014
 
 @author: Kyle Moy
 '''
-import requests, re
+import requests, re, sys
 CLIENT_ID = "c7dfda0b2defaf5"
 AUTH = {"Authorization":"Client-ID " + CLIENT_ID};
+REDDIT_AUTH = {'User-Agent':'/u/Vindicator209'}
 def parseItem(item):
     result = []
     url = item.url
-    if re.match('.*imgur.com/a/.*', url):
+    if re.match('.*imgur.com/a/.{7}$', url):
         '''
         Imgur Album
         '''
@@ -25,7 +26,7 @@ def parseItem(item):
         Image
         '''
         result += [item]
-    elif re.match('.*imgur.com/.*', url):
+    elif re.match('.*imgur.com/.{7}$', url):
         '''
         Imgur Link
         '''
@@ -36,6 +37,8 @@ def parseItem(item):
         link = json['data']['link']
         item = redditItem(item.title,item.author,link,item.permalink,item.sub)
         result += [item]
+    else:
+        print "UNKNOWN: %s" % url
     return result
     
 def parse(sub, limit):
@@ -43,17 +46,23 @@ def parse(sub, limit):
     Parse Subreddit
     '''
     items = []
-    source = requests.get("http://www.reddit.com/r/" + sub + "/.json?limit=" + limit)
-    json = source.json()
-    for child in json['data']['children']:
-        child = child['data']
-        item = redditItem(child['title'], child['author'], child['url'], child['permalink'], child['subreddit'])
-        items += parseItem(item)
-    return items
-    
+    source = requests.get("http://www.reddit.com/r/" + sub + "/.json?limit=" + limit, headers=REDDIT_AUTH)
+    try:
+        json = source.json()
+        test = json['data']['children']
+    except ValueError, e:
+        print json
+        print e
+        sys.exit()
+    else:
+        for child in json['data']['children']:
+            child = child['data']
+            item = redditItem(child['title'], child['author'], child['url'], child['permalink'], child['subreddit'])
+            items += parseItem(item)
+        return items
 class redditItem(object):
     '''
-    classdocs
+    Do I actully need this? Nope!
     '''
 
     def __init__(self, title, author, url, permalink, sub):

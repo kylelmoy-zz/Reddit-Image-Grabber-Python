@@ -3,7 +3,7 @@ Created on Mar 13, 2014
 
 @author: Kyle Moy
 '''
-import reddit, MySQLdb, getopt, sys
+import reddit, MySQLdb, getopt, sys, re
 
 def main(argv):
     try:                                
@@ -29,12 +29,16 @@ def main(argv):
     subNames = argv[10:]
     db = MySQLdb.connect(host=host, user=user, passwd=password, db=db,charset='utf8')
     cur = db.cursor() 
+    cur.execute("SELECT COUNT(*) FROM images")
+    count = cur.fetchone()[0]
     for sub in subNames:
+        print "Searching %s ..." % sub 
         result = reddit.parse(sub,limit)
         print "Found %s items in %s" % (len(result),sub)
         for item in result:
-            print "[%s, %s]" % (item.sub,item.url)
+            #print "[%s, %s]" % (item.sub,item.url)
             cur.execute("INSERT IGNORE INTO images (sub, title, author, permalink, link) VALUES (%s,%s,%s,%s,%s)",(item.sub,item.title,item.author,item.permalink,item.url))
+            cur.execute("ALTER TABLE images AUTO_INCREMENT = %s",count)
     db.commit()
 if __name__ == '__main__':
     main(sys.argv[1:])
